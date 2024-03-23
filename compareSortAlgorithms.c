@@ -1,6 +1,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 int extraMemoryAllocated;
 
@@ -28,54 +29,158 @@ size_t Size(void* ptr)
 
 // implements heap sort
 // extraMemoryAllocated counts bytes of memory allocated
-void heapSort(int arr[], int n)
-{
+void swap(int *a, int *b) {
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
+
+
+void heaping(int arr[], int n, int i) {
+    int highest = i; 
+    int l = 2*i + 1; 
+    int r = 2*i + 2;
+
+    if (l < n && arr[l] > arr[highest])
+        highest = l;
+
+    if (r < n && arr[r] > arr[highest])
+        highest = r;
+
+    if (highest != i) {
+        swap(&arr[i], &arr[highest]);
+        heaping(arr, n, highest);
+    }
+}
+
+void heapSort(int arr[], int n) {
+    for (int i = n / 2 - 1; i >= 0; i--)
+        heaping(arr, n, i);
+
+    for (int i = n - 1; i > 0; i--) {
+        swap(&arr[0], &arr[i]);
+        heaping(arr, i, 0);
+    }
+}
+
 
 // implement merge sort
 // extraMemoryAllocated counts bytes of extra memory allocated
-void mergeSort(int pData[], int l, int r)
-{
-	
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int *L = (int *)Alloc(n1 * sizeof(int));
+    int *R = (int *)Alloc(n2 * sizeof(int));
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k++] = L[i++];
+        } else {
+            arr[k++] = R[j++];
+        }
+    }
+
+    while (i < n1) {
+        arr[k++] = L[i++];
+    }
+
+    while (j < n2) {
+        arr[k++] = R[j++];
+    }
+
+    DeAlloc(L);
+    DeAlloc(R);
 }
+
+void mergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+
 
 // implement insertion sort
 // extraMemoryAllocated counts bytes of memory allocated
-void insertionSort(int* pData, int n)
-{
-	
+void insertionSort(int* pData, int n) {
+    int i, insert, j;
+    for (i = 1; i < n; i++) {
+        insert = pData[i];
+        j = i - 1;
+
+        while (j >= 0 && pData[j] > insert) {
+            pData[j + 1] = pData[j];
+            j = j - 1;
+        }
+        pData[j + 1] = insert;
+    }
 }
+
 
 // implement bubble sort
 // extraMemoryAllocated counts bytes of extra memory allocated
-void bubbleSort(int* pData, int n)
-{
-	
+void bubbleSort(int* pData, int n) {
+    for (int i = 0; i < n-1; i++)     
+        for (int j = 0; j < n-i-1; j++)
+            if (pData[j] > pData[j+1]) {
+                int bubble = pData[j];
+                pData[j] = pData[j+1];
+                pData[j+1] = bubble;
+            }
 }
+
 
 // implement selection sort
 // extraMemoryAllocated counts bytes of extra memory allocated
-void selectionSort(int* pData, int n)
-{
-	
+void selectionSort(int* pData, int n) {
+    for (int i = 0; i < n - 1; i++) {
+        int selection = i;
+        for (int j = i + 1; j < n; j++) {
+            if (pData[j] < pData[selection]) {
+                selection = j;
+            }
+        }
+        if (selection != i) {
+            int temp = pData[selection];
+            pData[selection] = pData[i];
+            pData[i] = temp; // Use temp to swap the values
+        }
+    }
 }
 
+
+
 // parses input file to an integer array
-int parseData(char *inputFileName, int **ppData)
-{
-	FILE* inFile = fopen(inputFileName,"r");
-	int dataSz = 0;
-	*ppData = NULL;
-	
-	if (inFile)
-	{
-		fscanf(inFile,"%d\n",&dataSz);
-		*ppData = (int *)Alloc(sizeof(int) * dataSz);
-		// Implement parse data block
-	}
-	
-	return dataSz;
+int parseData(char *inputFileName, int **ppData) {
+    FILE* inFile = fopen(inputFileName,"r");
+    int dataSz = 0;
+    *ppData = NULL;
+    
+    if (inFile) {
+        fscanf(inFile, "%d\n", &dataSz);
+        *ppData = (int *)Alloc(sizeof(int) * dataSz);
+        if (*ppData == NULL) {
+            printf("Cannot allocate memory\n");
+            exit(-1);
+        }
+        for (int i = 0; i < dataSz; ++i) {
+            fscanf(inFile, "%d", (*ppData) + i);
+        }
+        fclose(inFile);
+    }
+    
+    return dataSz;
 }
+
 
 // prints first and last 100 items in the data array
 void printArray(int pData[], int dataSz)
@@ -164,7 +269,7 @@ int main(void)
 		memcpy(pDataCopy, pDataSrc, dataSz*sizeof(int));
 		extraMemoryAllocated = 0;
 		start = clock();
-		heapSort(pDataCopy, 0, dataSz - 1);
+		heapSort(pDataCopy, dataSz - 1);
 		end = clock();
 		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 		printf("\truntime\t\t\t: %.1lf\n",cpu_time_used);
